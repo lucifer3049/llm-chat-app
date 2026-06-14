@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.domain.user import Role
-from app.infrastructure.db.models import User
+from app.infrastructure.db.models import ChatSession, Message, User
 
 
 class SqlUserRepository:
@@ -39,3 +39,46 @@ class SqlUserRepository:
             .where(User.role == role, User.is_active.is_(True))
         )
         return int(self._session.scalar(stmt) or 0)
+
+
+class SqlChatRepository:
+    """Implements `app.domain.ports.ChatRepository`."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def add_session(self, session: ChatSession) -> ChatSession:
+        self._session.add(session)
+        self._session.flush()  # assign PK without committing (caller owns the tx)
+        return session
+
+    def get_session(self, session_id: uuid.UUID) -> ChatSession | None:
+        return self._session.get(ChatSession, session_id)
+
+    def list_sessions(self, user_id: uuid.UUID) -> list[ChatSession]:
+        # Left-side list: most-recent first. No messages loaded -> avoids N+1.
+        stmt = (
+            select(ChatSession)
+            .where(ChatSession.user_id == user_id)
+            .order_by(ChatSession.updated_at.desc())
+        )
+        return list(self._session.scalars(stmt).all())
+
+    def delete_session(self, session: ChatSession) -> None:
+        # Messages cascade via the FK / relationship cascade.
+        self._session.delete(session)
+        self._session.flush()
+
+    def add_message(self, message: Message) -> Message:
+        self._session.add(message)
+        self._session.flush()
+        return message
+
+    def list_messages(self, session_id: uuid.UUID) -> list[Message]:
+        # Chronological history, served by ix_messages_session_created.
+        stmt = (
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at.asc())
+        )
+        return list(self._session.scalars(stmt).all())

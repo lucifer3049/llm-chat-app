@@ -12,10 +12,13 @@ from flask import Flask, g
 from sqlalchemy.orm import Session
 
 from app.application.auth_service import AuthService
+from app.application.chat_service import ChatService
 from app.application.user_admin_service import UserAdminService
+from app.infrastructure.config import get_settings
 from app.infrastructure.db.models import User
-from app.infrastructure.db.repositories import SqlUserRepository
+from app.infrastructure.db.repositories import SqlChatRepository, SqlUserRepository
 from app.infrastructure.db.session import SessionLocal
+from app.infrastructure.llm import get_llm_provider
 from app.infrastructure.security.jwt import TokenError, decode_access_token
 
 auth = HTTPTokenAuth(scheme="Bearer", description="JWT access token from /auth/login")
@@ -37,6 +40,14 @@ def auth_service() -> AuthService:
 
 def user_admin_service() -> UserAdminService:
     return UserAdminService(user_repository())
+
+
+def chat_repository() -> SqlChatRepository:
+    return SqlChatRepository(get_db())
+
+
+def chat_service() -> ChatService:
+    return ChatService(chat_repository(), get_llm_provider(get_settings()))
 
 
 @auth.verify_token

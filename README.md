@@ -4,7 +4,7 @@ Multi-user LLM chat web application — apiflask (backend) + Vue 3 (frontend) +
 PostgreSQL + Groq, one-command up with Docker Compose.
 
 > Build follows [PLAN.md](PLAN.md). This README grows each phase; current state:
-> **Day 3 — RBAC + admin/super-admin API** (permission matrix, cross-role guards).
+> **Day 4 — chat persistence** (session CRUD + message history, mock LLM provider).
 
 ## Quick start
 
@@ -100,6 +100,40 @@ No API path creates, deactivates, or demotes a super_admin (they exist only via
 the seed), so the system can never reach a "no super admin" state. Any operation
 targeting a super_admin is rejected (403).
 
+## Chat
+
+Each user has multiple chat sessions (ChatGPT-style). Sessions and messages are
+persisted; history loads in chronological order. Authorization here is **per-user
+ownership** — a session belonging to another user returns `404` (not `403`) so
+the API never reveals which session ids exist.
+
+| Method & path | Description |
+|---|---|
+| `POST   /chat/sessions` | create a session (optional `title`) |
+| `GET    /chat/sessions` | list own sessions, most-recently-active first |
+| `GET    /chat/sessions/{id}` | load a session with its full message history |
+| `DELETE /chat/sessions/{id}` | delete own session (cascades to messages) |
+| `POST   /chat/sessions/{id}/messages` | send a message; persists the user turn, gets the assistant reply, persists it, returns both |
+
+- **LLM provider** is abstracted behind an `LLMProvider` port. Day 4 ships a
+  deterministic **mock** (`LLM_PROVIDER=mock`) so the full flow works with no API
+  key; the real Groq adapter and SSE streaming arrive in Day 5.
+- **First message** auto-names an untitled session (truncated); the title is not
+  overwritten afterwards.
+- **Ordering** does not trust the wall clock (Postgres `now()` is
+  transaction-time, and OS clocks can be coarse): each message is stamped
+  strictly after the last in its session, so history is deterministic without an
+  extra sequence column.
+
+```bash
+SID=$(curl -s -X POST localhost:8000/chat/sessions \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{}' | python -c "import sys,json;print(json.load(sys.stdin)['id'])")
+curl -s -X POST localhost:8000/chat/sessions/$SID/messages \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"content":"Hello!"}'
+```
+
 ## Configuration
 
 All secrets and tunables come from environment variables (`.env`); nothing is
@@ -126,7 +160,9 @@ pytest
 - [x] **Day 3** — RBAC: central permission matrix + `@require_permission`,
   admin/super-admin API (create/list/activate/promote), cross-role guards,
   invariant I-2 (always >=1 active super_admin), full matrix tests.
-- [ ] Day 4 — chat persistence (mock LLM).
+- [x] **Day 4** — chat persistence: session CRUD, chronological message history,
+  per-user ownership (404 on foreign sessions), `LLMProvider` port + mock,
+  auto-title on first message; service + repository tests.
 - [ ] Day 5 — real Groq SSE streaming.
 - [ ] Day 6 — export, frontend admin pages, observability bonuses.
 - [ ] Day 7 — docs, transcript redaction, demo.
