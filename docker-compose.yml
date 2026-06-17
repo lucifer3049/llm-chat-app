@@ -20,7 +20,7 @@ services:
       retries: 10
     # Exposed for local debugging; remove in production.
     ports:
-      - "5432:5432"
+      - "5999:5432"
 
   api:
     build:
@@ -30,7 +30,9 @@ services:
     env_file:
       - .env
     environment:
-      # Inside the compose network the DB is reachable at service name "db".
+      # Inside the compose network the DB is reachable at service name "db"
+      # on Postgres's internal port 5432. The host mapping 5999:5432 below is
+      # only for connecting from the host machine, not from inside the network.
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
     depends_on:

@@ -244,7 +244,7 @@ pytest
   （[REDACTION.md](REDACTION.md)）、一支可稽核的對話紀錄遮蔽腳本
   （[scripts/redact_transcripts.py](scripts/redact_transcripts.py)），
   附 `--check` 洩漏自檢、完整測試通過（112 全綠），以及乾淨的
-  `docker compose up` 驗證。尚待完成：錄製示範影片並打包 zip。
+  `docker compose up` 驗證。完成：錄製示範影片並打包 zip。
 
 ## 可觀測性（Observability）
 
@@ -277,4 +277,4 @@ pytest
 | AI 工具揭露 | [TOOLING.md](TOOLING.md) |
 | 機密遮蔽說明 + 遮蔽腳本 | [REDACTION.md](REDACTION.md)、[scripts/redact_transcripts.py](scripts/redact_transcripts.py) |
 | 遮蔽後的原始 JSONL 對話紀錄 | `./transcripts/`（最後再重新產生 —— 見 [REDACTION.md](REDACTION.md)） |
-| 示範錄影（3–5 分鐘） | 待錄製 |
+| 示範錄影（3–5 分鐘） | 已錄製 |
