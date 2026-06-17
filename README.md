@@ -21,6 +21,10 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 # 2. 啟動整個服務（Postgres + API）。Migration 會自動執行。
 docker compose up --build
+
+# 3.關閉專案 
+cd llm-chat-app
+docker compose down -v
 ```
 
 接著開啟：
